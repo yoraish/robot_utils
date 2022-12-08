@@ -39,7 +39,8 @@ class ImagesToBag(object):
 
         # Get the names of all the images in the directory.
         img_fns = os.listdir(self.imgs_dir_gp)
-
+        img_fns = sorted(img_fns)
+        
         # Convert to global paths.
         img_gps = [os.path.join(self.imgs_dir_gp, fn) for fn in img_fns]
 
@@ -48,7 +49,7 @@ class ImagesToBag(object):
         # Initialize a bagfile object.
         bag = rosbag.Bag(self.bagfile_gp, 'w')
 
-        for img_gp, img_stamp in tqdm(zip(img_gps, img_stamps)):
+        for img_gp, img_stamp in tqdm(zip(img_gps, img_stamps), total=len(img_fns)):
             # Get the image.
             img = cv2.imread(img_gp)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
