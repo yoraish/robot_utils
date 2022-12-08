@@ -1,0 +1,16 @@
+#!/bin/bash
+
+open() {
+    #do things with parameters like $1 such as
+    if [[ $1 != '' ]]
+    then
+	    echo "Opening path $(pwd)/$1"
+   	    xdg-open $(pwd)/$1 
+	    return
+    fi
+    echo "Opening here. Path is $(pwd)"
+    xdg-open $(pwd)
+}
+
+
+
