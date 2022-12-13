@@ -94,6 +94,15 @@ class BagToTrajDataset(object):
         # Create output directories.
         if not os.path.exists(self.out_dir_gp):
             os.makedirs(self.out_dir_gp)
+        else:
+            print(Fore.RED + f"Warning: Output directory [{self.out_dir_gp}] already exists." + Style.RESET_ALL)
+            overwrite = input("Overwrite? [y/N]: ")
+            if overwrite == 'y':
+                print("Overwriting.")
+            else:
+                print("Exiting.")
+                exit()
+
 
         # Create output subdirectories.
         self.out_dir_images = os.path.join(self.out_dir_gp, "images")

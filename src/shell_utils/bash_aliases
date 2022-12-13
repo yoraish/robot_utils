@@ -12,5 +12,14 @@ open() {
     xdg-open $(pwd)
 }
 
-
-
+path() {
+    #do things with parameters like $1 such as
+    if [[ $1 == '' ]]
+    then
+   	    echo $(pwd)
+        return
+    else 
+        echo "$(pwd)/$1"
+        return
+    fi
+}
