@@ -5,7 +5,6 @@ from scipy.spatial.transform import Rotation
 class TrajectoryEvaluatorBase (): 
     """Base class for trajectory evaluators."""
     
-
     ##########################
     # Transformation functions.
     ##########################
@@ -28,6 +27,31 @@ class TrajectoryEvaluatorBase ():
             SE[:3,3] = pos
             SEs.append(SE)
         return SEs
+
+
+    def ominus(self, a, b):
+        """Compute the relative pose error.
+        Args:
+            a (np.array, 4x4): First pose.
+            b (np.array, 4x4): Second pose.
+        """
+        a_inv = np.linalg.inv(a)
+        return np.dot(a_inv, b)
+
+    def compute_distance(self, transform):
+        """Compute the translation error.
+        Args:
+            transform (np.array, 4x4): Relative pose error.
+        """
+        return np.linalg.norm(transform[0:3,3])    
+
+
+    def compute_angle(self, transform):
+        """
+        Compute the rotation angle from a 4x4 homogeneous matrix.
+        """
+        # an invitation to 3-d vision, p 27
+        return np.arccos( min(1,max(-1, (np.trace(transform[0:3,0:3]) - 1)/2) ))
 
 
     ##########################

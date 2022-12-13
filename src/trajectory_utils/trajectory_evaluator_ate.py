@@ -111,9 +111,9 @@ class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):
 
         # Set up a constant scale factor, if one is provided.
         if self.args.no_calc_scale:
-            self.calc_scale = False
+            self.do_scale = False
         else: 
-            self.calc_scale = True
+            self.do_scale = True
             
         
         # Set up the verbose flag.
@@ -138,7 +138,7 @@ class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):
         return traj
 
 
-    def compute_ate(self, gt_traj = None, est_traj = None, calc_scale=None, do_align=False):
+    def compute_rpe(self, gt_traj = None, est_traj = None, do_scale=None, do_align=False):
         """Compute the absolute trajectory error (ATE).
             self.gt_traj (np.ndarray , (N,8): stamp, xyz xyzw): Ground truth trajectory.
             self.est_traj (np.ndarray, (N,8): stamp, xyz xyzw): Estimated trajectory.
@@ -152,13 +152,13 @@ class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):
             gt_traj = self.gt_traj
         if est_traj is None:
             est_traj = self.est_traj
-        if calc_scale is None:
-            calc_scale = self.calc_scale
+        if do_scale is None:
+            do_scale = self.do_scale
     
 
         # Align the estimated trajectory to the ground truth trajectory, get the alignment transformation, and the scale if requested.
         if do_align:
-            est_traj_aligned, s = self.align_and_scale_traj_to_gt(gt_traj, est_traj, calc_scale = calc_scale)
+            est_traj_aligned, s = self.align_and_scale_traj_to_gt(gt_traj, est_traj, do_scale)
             print(Fore.GREEN + "Scale factor: " + str(s) + Style.RESET_ALL)
         else:
             est_traj_aligned = est_traj
@@ -173,11 +173,13 @@ class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):
             self.visualize(gt_traj, est_traj_aligned, title_text)
             self.visualize_2d_projection(gt_traj, est_traj_aligned, title_text)
 
-        # Return the ATE, the ground truth trajectory without its timestamps, and the aligned estimated trajectory.
-        return ate, self.gt_traj[:, 1:], est_traj_aligned
+        # Return the ATE, the ground truth trajectory with its timestamps, and the aligned estimated trajectory.
+        return ate, gt_traj, est_traj_aligned
 
 
 
 if __name__ == "__main__":
     ate_evaluator = TrajectoryEvaluatorATE()
     ate, gt_traj, est_traj_aligned = ate_evaluator.compute_ate()
+    print(Fore.GREEN + "ATE: " + str(ate) + Style.RESET_ALL)
+    print(Fore.GREEN + "GT and aligned estimated trajectory shapes: " + str(gt_traj.shape) + " " + str(est_traj_aligned.shape) + Style.RESET_ALL)
