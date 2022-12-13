@@ -14,7 +14,7 @@ import argparse
 import numpy as np
 import os
 
-class BagToFiles(object):
+class BagToImages(object):
     def __init__(self):
 
         # Set up command line arguments.
@@ -59,5 +59,5 @@ class BagToFiles(object):
         bag.close()
 
 if __name__ == "__main__":
-    b2f = BagToFiles()
+    b2f = BagToImages()
     b2f.process_bag()
