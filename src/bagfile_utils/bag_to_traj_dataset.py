@@ -55,30 +55,16 @@ from pytransform3d.rotations import *
 import rosbag
 
 class BagToTrajDataset(object):
-    def __init__(self):
+    def __init__(self, bagfile_gp, image_topic, imu_topic, mocap_topic, out_dir_gp, bagstart = 0, bagend = np.inf):
+        # Parse arguments.
 
-        # Set up command line arguments.
-        self.parser = argparse.ArgumentParser()
-        self.parser.add_argument('-b', '--bagfile', required=True, help='Path to the bagfile.')
-        self.parser.add_argument('--image-topic', required=True, help='topic to extract images from.')
-        self.parser.add_argument('--imu-topic', required=True, help='topic to extract inertial data from.')
-        self.parser.add_argument('--mocap-topic', required=True, help='topic to extract motion capture data from.')
-        self.parser.add_argument('-o', '--output_root', default='/home', help='Path to the output directory.')
-        self.parser.add_argument('-s', '--start', default='13')
-        self.parser.add_argument('-e', '--end', default='0')
-        
-        self.args = self.parser.parse_args()
-
-        self.bagfile_gp = self.args.bagfile
-        self.image_topic = self.args.image_topic
-        self.imu_topic = self.args.imu_topic
-        self.mocap_topic = self.args.mocap_topic
-        self.out_dir_gp = self.args.output_root
-        self.bagstart = float(self.args.start)
-        self.bagend = float(self.args.end)
-        if not self.bagend:
-            self.bagend = float('inf')
-
+        self.bagfile_gp = bagfile_gp
+        self.image_topic = image_topic
+        self.imu_topic = imu_topic
+        self.mocap_topic = mocap_topic
+        self.out_dir_gp = out_dir_gp
+        self.bagstart = bagstart
+        self.bagend = bagend
 
         # The transformations between:
         # * the mocap motion frame (the frame who's motion is reported in the mocap topics) and the robot frame (defined to be the IMU frame).
@@ -232,9 +218,22 @@ class BagToTrajDataset(object):
 
 
     
+def handle_args():
+    # Set up command line arguments.
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-b', '--bagfile', required=True, help='Path to the bagfile.')
+    parser.add_argument('--image-topic', required=True, help='topic to extract images from.')
+    parser.add_argument('--imu-topic', required=True, help='topic to extract inertial data from.')
+    parser.add_argument('--mocap-topic', required=True, help='topic to extract motion capture data from.')
+    parser.add_argument('-o', '--output_root', default='/home', help='Path to the output directory.')
+    parser.add_argument('-s', '--start', default='13')
+    parser.add_argument('-e', '--end', default='0')
+    
+    return parser.parse_args()
 
 if __name__ == "__main__":
-    b2f = BagToTrajDataset()
+    args = handle_args()
+    b2f = BagToTrajDataset(**args)
     b2f.process_bag()
     b2f.visualize_traj()
 
