@@ -1,10 +1,75 @@
+"""
+Author: Yorai Shaoul 
+Date: December 2022
+
+Adapted from Wenshan Wang and Juergen Sturm
+See trajectory_evaluator_rpe.py for license.
+"""
+import argparse
+from colorama import Fore, Style
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 
-class TrajectoryEvaluatorBase (): 
+class TrajectoryEvaluatorBase(): 
     """Base class for trajectory evaluators."""
-    
+    def __init__(self):
+        #####################
+        # Parse the command line arguments
+        # and set parameters. If args were not passed, the values here may be None and False.
+        #####################
+        # Set up command line arguments.
+        self.args = self.parse_args()
+
+        # Set up the ground truth and estimated trajectory file paths.
+        self.gt_file = self.args.gt_file
+        self.est_file = self.args.est_file
+
+        # Set up the plot directory.
+        self.plot_dir = self.args.plot_dir
+            
+        # Set up the verbose flag.
+        self.verbose = self.args.verbose
+
+        # Set up the plot flag.
+        self.plot = self.args.plot
+
+        # Set up the scale flag.
+        self.do_scale = not self.args.no_calc_scale
+
+        # Read the trajectories, if those files were provided.
+        if self.gt_file is not None and self.est_file is not None:
+            print(Fore.GREEN + 'Reading the ground truth and estimated trajectories...' + Style.RESET_ALL)
+            self.gt_traj = self.read_trajectory(self.gt_file)
+            self.est_traj = self.read_trajectory(self.est_file)
+        else:
+            self.gt_traj = None
+            self.est_traj = None
+
+    ##########################
+    # Arguments.
+    ##########################
+    def parse_args(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--gt-file', required=False, help='Path to the ground truth trajectory file.')
+        parser.add_argument('--est-file', required=False, help='Path to the estimated trajectory file.')
+        parser.add_argument('--plot', action='store_true', help='Plot the results.')
+        parser.add_argument('--plot-dir', default='/home', help='Path to the directory where the plot will be saved.')
+        parser.add_argument('--no-calc-scale', action='store_true', help="If flag existing, unity scale is applied to the estimated trajectory, and not computed, before computing the ATE/RPE.")
+        parser.add_argument('--verbose', action='store_true', help='Print the results.')
+        return parser.parse_args()
+
+    ##########################
+    # Files.
+    ##########################
+    def read_trajectory(self, traj_file):
+        """Read a trajectory from a file.
+        Args:
+            traj_file (str): Path to the trajectory file.
+        """
+        traj = np.loadtxt(traj_file)
+        return traj
+
     ##########################
     # Transformation functions.
     ##########################
@@ -57,7 +122,7 @@ class TrajectoryEvaluatorBase ():
     ##########################
     # Visualization functions.
     ##########################
-    def visualize(self, gt_traj, est_traj, title_text = ''):
+    def visualize(self, gt_traj, est_traj, title_text = '', arrow_length = 0.1):
         """Visualize the ground truth trajectory and the estimated trajectory.
         """
         # Visualize the trajectory.
@@ -68,16 +133,16 @@ class TrajectoryEvaluatorBase ():
             ax.plot(est_traj[:,1], est_traj[:,2], est_traj[:,3], label="EST. Aligned and scaled.", color = 'r', alpha=0.5)
         
         for ix, pose in enumerate(gt_traj):
-            if ix % 50 != 0:
+            if ix % 5 != 0:
                 continue
             pose_gt = gt_traj[ix]
             u, v, w = Rotation.from_quat(pose_gt[4:]).as_matrix() @ np.array([1, 0, 0])
-            ax.quiver(pose_gt[1], pose_gt[2], pose_gt[3], u, v, w, length=0.1, normalize=True, color="blue", alpha=0.5)
+            ax.quiver(pose_gt[1], pose_gt[2], pose_gt[3], u, v, w, length=arrow_length, normalize=True, color="blue", alpha=0.5)
 
             if est_traj is not None:
                 pose_est = est_traj[ix]
                 u, v, w = Rotation.from_quat(pose_est[4:]).as_matrix() @ np.array([1, 0, 0])
-                ax.quiver(pose_est[1], pose_est[2], pose_est[3], u, v, w, length=0.1, normalize=True, color="red", alpha = 0.5)
+                ax.quiver(pose_est[1], pose_est[2], pose_est[3], u, v, w, length=arrow_length, normalize=True, color="red", alpha = 0.5)
             
         ax.legend()
         ax.set_title(title_text)
@@ -109,17 +174,6 @@ class TrajectoryEvaluatorBase ():
         ax.legend()
         plt.show()
 
-    def __init__(self, gt_traj, est_traj):
-        """Initialize the trajectory evaluator.
-        
-        Input:
-        gt_traj -- ground truth trajectory (8xn) i, xyz, xyzw.
-        est_traj -- estimated trajectory (8xn) i, xyz, xyzw.
-        max_diff -- maximum difference between timestamps to consider a match.
-        
-        """
-        self.gt_traj = gt_traj
-        self.est_traj = est_traj
 
     def align_and_scale_traj_to_gt(self, gt_traj, est_traj, calc_scale=False):
         """Align two trajectories using the method of Horn (closed-form).
@@ -173,7 +227,7 @@ class TrajectoryEvaluatorBase ():
         # ate = np.sqrt(np.dot(trans_error,trans_error) / len(trans_error))
 
         # Create the transformed trajectory. This rotates the provided quaternions as well.
-        est_SEs = self.pos_quats_to_SE_matrices(self.est_traj[:,1:]) # Pass in the estimated trajectory, without the timestamps.
+        est_SEs = self.pos_quats_to_SE_matrices(est_traj[:,1:]) # Pass in the estimated trajectory, without the timestamps.
 
         R_gt_in_est, t_gt_in_est = rot, trans
         gt_in_est = np.eye(4) 

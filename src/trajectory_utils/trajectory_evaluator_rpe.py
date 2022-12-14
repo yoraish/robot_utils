@@ -74,51 +74,11 @@ from matplotlib import pyplot as plt
 from trajectory_evaluator_base import TrajectoryEvaluatorBase
 
 class TrajectoryEvaluatorRPE(TrajectoryEvaluatorBase):
-    def parse_args(self):
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--gt-file', required=True, help='Path to the ground truth trajectory file.')
-        parser.add_argument('--est-file', required=True, help='Path to the estimated trajectory file.')
-        parser.add_argument('--plot', action='store_true', help='Plot the results.')
-        parser.add_argument('--plot-dir', default='/home', help='Path to the directory where the plot will be saved.')
-        parser.add_argument('--verbose', action='store_true', help='Print the results.')
-        return parser.parse_args()
 
     def __init__(self):
 
         # Instantiate super class.
-        super(TrajectoryEvaluatorRPE, self)
-        
-        #####################
-        # Parse the command line arguments
-        # and set parameters.
-        #####################
-        # Set up command line arguments.
-        self.args = self.parse_args()
-
-        # Set up the ground truth and estimated trajectory file paths.
-        self.gt_file = self.args.gt_file
-        self.est_file = self.args.est_file
-
-        # Set up the plot directory.
-        self.plot_dir = self.args.plot_dir
-            
-        # Set up the verbose flag.
-        self.verbose = self.args.verbose
-
-        # Set up the plot flag.
-        self.plot = self.args.plot
-
-        # Read the trajectories.
-        self.gt_traj = self.read_trajectory(self.gt_file)
-        self.est_traj = self.read_trajectory(self.est_file)
-
-    def read_trajectory(self, traj_file):
-        """Read a trajectory from a file.
-        Args:
-            traj_file (str): Path to the trajectory file.
-        """
-        traj = np.loadtxt(traj_file)
-        return traj
+        super().__init__()
 
     def compute_rpe(self, gt_traj = None, est_traj = None, delta = 1, do_scale = False, do_align = False):
         # Use the member variables if an input is not provided.
@@ -132,7 +92,6 @@ class TrajectoryEvaluatorRPE(TrajectoryEvaluatorBase):
         # Align the estimated trajectory to the ground truth trajectory, get the alignment transformation, and the scale if requested.
         if do_align:
             est_traj_aligned, s = self.align_and_scale_traj_to_gt(gt_traj, est_traj, do_scale)
-            print(Fore.GREEN + "Scale factor: " + str(s) + Style.RESET_ALL)
         else:
             est_traj_aligned = est_traj
             s = 1.0

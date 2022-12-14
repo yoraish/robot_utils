@@ -78,53 +78,11 @@ from matplotlib import pyplot as plt
 # Local imports.
 from trajectory_evaluator_base import TrajectoryEvaluatorBase
 
-class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):
-    def parse_args(self):
-        
-        # Instantiate super class.
-        super(TrajectoryEvaluatorATE, self)
-
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--gt-file', required=True, help='Path to the ground truth trajectory file.')
-        parser.add_argument('--est-file', required=True, help='Path to the estimated trajectory file.')
-        parser.add_argument('--plot', action='store_true', help='Plot the results.')
-        parser.add_argument('--plot-dir', default='/home', help='Path to the directory where the plot will be saved.')
-        parser.add_argument('--no-calc-scale', action='store_true', help="If flag existing, unity scale is applied to the estimated trajectory, and not computed, before computing the ATE.")
-        parser.add_argument('--verbose', action='store_true', help='Print the results.')
-        return parser.parse_args()
+class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):        
 
     def __init__(self):
-        
-        #####################
-        # Parse the command line arguments
-        # and set parameters.
-        #####################
-        # Set up command line arguments.
-        self.args = self.parse_args()
-
-        # Set up the ground truth and estimated trajectory file paths.
-        self.gt_file = self.args.gt_file
-        self.est_file = self.args.est_file
-
-        # Set up the plot directory.
-        self.plot_dir = self.args.plot_dir
-
-        # Set up a constant scale factor, if one is provided.
-        if self.args.no_calc_scale:
-            self.do_scale = False
-        else: 
-            self.do_scale = True
-            
-        
-        # Set up the verbose flag.
-        self.verbose = self.args.verbose
-
-        # Set up the plot flag.
-        self.plot = self.args.plot
-
-        # Read the trajectories.
-        self.gt_traj = self.read_trajectory(self.gt_file)
-        self.est_traj = self.read_trajectory(self.est_file)
+        """Initialize the trajectory evaluator."""
+        super().__init__()
 
         # Placeholder for estimated trajectory aligned to the ground truth and scaled.
         self.est_traj_aligned = None
@@ -138,7 +96,7 @@ class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):
         return traj
 
 
-    def compute_rpe(self, gt_traj = None, est_traj = None, do_scale=None, do_align=False):
+    def compute_ate(self, gt_traj = None, est_traj = None, do_scale=None, do_align=False):
         """Compute the absolute trajectory error (ATE).
             self.gt_traj (np.ndarray , (N,8): stamp, xyz xyzw): Ground truth trajectory.
             self.est_traj (np.ndarray, (N,8): stamp, xyz xyzw): Estimated trajectory.
