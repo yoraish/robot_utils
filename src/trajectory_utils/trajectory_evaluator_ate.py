@@ -80,20 +80,12 @@ from trajectory_evaluator_base import TrajectoryEvaluatorBase
 
 class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):        
 
-    def __init__(self):
+    def __init__(self, gt_file=None, est_file=None, plot=False, plot_dir=None, do_scale=True, do_align=True):
         """Initialize the trajectory evaluator."""
-        super().__init__()
+        super().__init__(gt_file, est_file, plot, plot_dir, do_scale, do_align)
 
         # Placeholder for estimated trajectory aligned to the ground truth and scaled.
         self.est_traj_aligned = None
-
-    def read_trajectory(self, traj_file):
-        """Read a trajectory from a file.
-        Args:
-            traj_file (str): Path to the trajectory file.
-        """
-        traj = np.loadtxt(traj_file)
-        return traj
 
 
     def compute_ate(self, gt_traj = None, est_traj = None, do_scale=None, do_align=False):
@@ -129,7 +121,7 @@ class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):
         if self.plot:
             title_text = "ATE: {:.3f} m".format(ate)
             self.visualize(gt_traj, est_traj_aligned, title_text)
-            self.visualize_2d_projection(gt_traj, est_traj_aligned, title_text)
+            self.visualize_2d_projection(gt_traj, est_traj_aligned, title_text, self.plot_dir)
 
         # Return the ATE, the ground truth trajectory with its timestamps, and the aligned estimated trajectory.
         return ate, gt_traj, est_traj_aligned
@@ -137,7 +129,18 @@ class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):
 
 
 if __name__ == "__main__":
-    ate_evaluator = TrajectoryEvaluatorATE()
-    ate, gt_traj, est_traj_aligned = ate_evaluator.compute_ate()
+
+    # Parse the command line arguments.
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gt-file', required=False, help='Path to the ground truth trajectory file.')
+    parser.add_argument('--est-file', required=False, help='Path to the estimated trajectory file.')
+    parser.add_argument('--plot', action='store_true', help='Plot the results.')
+    parser.add_argument('--plot-dir', default='', help='Path to the directory where the plot will be saved.')
+    parser.add_argument('--do-scale', action='store_true', help="If flag existing, unity scale is applied to the estimated trajectory, and not computed, before computing the ATE/RPE.")
+    parser.add_argument('--do-align', action='store_true', help='Whether to align the estimated trajectory to the ground truth trajectory.')
+    args = parser.parse_args()
+
+    ate_evaluator = TrajectoryEvaluatorATE(**vars(args))
+    ate, gt_traj, est_traj_aligned = ate_evaluator.compute_ate(do_align=True, do_scale=True)
     print(Fore.GREEN + "ATE: " + str(ate) + Style.RESET_ALL)
     print(Fore.GREEN + "GT and aligned estimated trajectory shapes: " + str(gt_traj.shape) + " " + str(est_traj_aligned.shape) + Style.RESET_ALL)

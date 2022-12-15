@@ -6,6 +6,7 @@ Adapted from Wenshan Wang and Juergen Sturm
 See trajectory_evaluator_rpe.py for license.
 """
 import argparse
+import os
 from colorama import Fore, Style
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,29 +14,27 @@ from scipy.spatial.transform import Rotation
 
 class TrajectoryEvaluatorBase(): 
     """Base class for trajectory evaluators."""
-    def __init__(self):
+    def __init__(self, gt_file=None, est_file=None, plot=False, plot_dir=None, do_scale=True, do_align=True):
         #####################
         # Parse the command line arguments
         # and set parameters. If args were not passed, the values here may be None and False.
         #####################
-        # Set up command line arguments.
-        self.args = self.parse_args()
 
         # Set up the ground truth and estimated trajectory file paths.
-        self.gt_file = self.args.gt_file
-        self.est_file = self.args.est_file
+        self.gt_file = gt_file
+        self.est_file = est_file
+        
+        # Set up the plot flag.
+        self.plot = plot
 
         # Set up the plot directory.
-        self.plot_dir = self.args.plot_dir
-            
-        # Set up the verbose flag.
-        self.verbose = self.args.verbose
-
-        # Set up the plot flag.
-        self.plot = self.args.plot
+        if not plot_dir:
+            self.plot_dir = os.path.dirname(est_file)
+        else:
+            self.plot_dir = plot_dir
 
         # Set up the scale flag.
-        self.do_scale = not self.args.no_calc_scale
+        self.do_scale = do_scale
 
         # Read the trajectories, if those files were provided.
         if self.gt_file is not None and self.est_file is not None:
@@ -46,18 +45,6 @@ class TrajectoryEvaluatorBase():
             self.gt_traj = None
             self.est_traj = None
 
-    ##########################
-    # Arguments.
-    ##########################
-    def parse_args(self):
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--gt-file', required=False, help='Path to the ground truth trajectory file.')
-        parser.add_argument('--est-file', required=False, help='Path to the estimated trajectory file.')
-        parser.add_argument('--plot', action='store_true', help='Plot the results.')
-        parser.add_argument('--plot-dir', default='/home', help='Path to the directory where the plot will be saved.')
-        parser.add_argument('--no-calc-scale', action='store_true', help="If flag existing, unity scale is applied to the estimated trajectory, and not computed, before computing the ATE/RPE.")
-        parser.add_argument('--verbose', action='store_true', help='Print the results.')
-        return parser.parse_args()
 
     ##########################
     # Files.
@@ -68,6 +55,11 @@ class TrajectoryEvaluatorBase():
             traj_file (str): Path to the trajectory file.
         """
         traj = np.loadtxt(traj_file)
+        print(Fore.GREEN + "Read trajectory with " + str(traj.shape) + " poses." + Style.RESET_ALL)
+        if traj.shape[1] == 7:
+            # No timestamp, add one.
+            print(Fore.YELLOW + "No timestamp in trajectory file, adding one." + Style.RESET_ALL    )
+            traj = np.hstack((np.arange(traj.shape[0]).reshape(-1,1), traj))
         return traj
 
     ##########################
@@ -148,7 +140,7 @@ class TrajectoryEvaluatorBase():
         ax.set_title(title_text)
         plt.show()
 
-    def visualize_2d_projection(self, gt_traj, est_traj, title_text = ''):
+    def visualize_2d_projection(self, gt_traj, est_traj, title_text = '', plot_dir = None):
         """Visualize the ground truth trajectory and the estimated trajectory.
         """
         # Visualize the trajectory.
@@ -172,6 +164,10 @@ class TrajectoryEvaluatorBase():
         
         ax.set_title(title_text)
         ax.legend()
+
+        if plot_dir is not None:
+            plt.savefig(os.path.join(plot_dir, title_text + '.png'))
+
         plt.show()
 
 

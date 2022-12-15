@@ -19,7 +19,9 @@ path() {
    	    echo $(pwd)
         return
     else 
-        echo "$(pwd)/$1"
+        echo "Copying to clipboard $(pwd)/$1"
+        echo "$(pwd)/$1" | xclip -selection clipboard
+
         return
     fi
 }

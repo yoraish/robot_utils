@@ -55,14 +55,19 @@ from pytransform3d.rotations import *
 import rosbag
 
 class BagToTrajDataset(object):
-    def __init__(self, bagfile_gp, image_topic, imu_topic, mocap_topic, out_dir_gp, bagstart = 0, bagend = np.inf):
+    def __init__(self, bagfile_gp, image_topic, imu_topic, mocap_topic, out_dir_gp = None, bagstart = 0, bagend = np.inf):
         # Parse arguments.
 
         self.bagfile_gp = bagfile_gp
         self.image_topic = image_topic
         self.imu_topic = imu_topic
         self.mocap_topic = mocap_topic
-        self.out_dir_gp = out_dir_gp
+
+        # If no output directory specified, save as a subdirectory of the bagfile directory.
+        if out_dir_gp == None:
+            self.out_dir_gp = os.path.join(os.path.dirname(self.bagfile_gp), "traj_dataset")
+        else:
+            self.out_dir_gp = out_dir_gp
         self.bagstart = bagstart
         self.bagend = bagend
 
@@ -100,7 +105,7 @@ class BagToTrajDataset(object):
         self.out_dir_mocap = os.path.join(self.out_dir_gp, "mocap")
         if not os.path.exists(self.out_dir_mocap):
             os.makedirs(self.out_dir_mocap)
-        self.out_dir_traj = os.path.join(self.out_dir_gp, "traj")
+        self.out_dir_traj = os.path.join(self.out_dir_gp, "gt_traj")
         if not os.path.exists(self.out_dir_traj):
             os.makedirs(self.out_dir_traj)
 
@@ -112,7 +117,7 @@ class BagToTrajDataset(object):
         # Storage objects for collected information.
         self.imu_data = [] #   Of form: [stamp in nsecs, ax, ay, az, wx, wy, wz ].
         self.mocap_data = [] # Of form: [stamp in nsecs, x, y, z, qx, qy, qz, qw].
-        self.traj_data = [] #  Of form: [stamp in nsecs, x, y, z, qx, qy, qz, qw].
+        self.gt_traj_data = [] #  Of form: [stamp in nsecs, x, y, z, qx, qy, qz, qw].
 
 
     def process_bag(self):
@@ -171,7 +176,7 @@ class BagToTrajDataset(object):
                     dx, dy, dz = baselink_in_mocap[:3, 3]
 
                     # Record the trajectory data.
-                    self.traj_data.append([t.to_nsec(), dx, dy, dz, q[0], q[1], q[2], q[3]]) 
+                    self.gt_traj_data.append([t.to_nsec(), dx, dy, dz, q[0], q[1], q[2], q[3]]) 
 
             else:
                 continue
@@ -191,20 +196,20 @@ class BagToTrajDataset(object):
         self.mocap_data = np.vstack(self.mocap_data)
         np.savetxt(self.out_file_mocap, self.mocap_data, fmt="%d %f %f %f %f %f %f %f", header="nsecs x y z qx qy qz qw")
 
-        self.traj_data = np.vstack(self.traj_data)
-        np.savetxt(self.out_file_traj, self.traj_data, fmt="%d %f %f %f %f %f %f %f", header="nsecs x y z qx qy qz qw")
+        self.gt_traj_data = np.vstack(self.gt_traj_data)
+        np.savetxt(self.out_file_traj, self.gt_traj_data, fmt="%d %f %f %f %f %f %f %f", header="nsecs x y z qx qy qz qw")
 
     def visualize_traj(self):
         # Visualize the trajectory.
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.plot(self.traj_data[:,1], self.traj_data[:,2], self.traj_data[:,3], label="Traj - base_link")
+        ax.plot(self.gt_traj_data[:,1], self.gt_traj_data[:,2], self.gt_traj_data[:,3], label="Traj - base_link")
         ax.plot(self.mocap_data[:,1], self.mocap_data[:,2], self.mocap_data[:,3], label="Mocap")
         
-        for ix, pose in enumerate(self.traj_data):
+        for ix, pose in enumerate(self.gt_traj_data):
             if ix % 10 != 0:
                 continue
-            pose_traj = self.traj_data[ix]
+            pose_traj = self.gt_traj_data[ix]
             u, v, w = Rotation.from_quat(pose_traj[4:]).as_matrix() @ np.array([1, 0, 0])
 
             pose_mocap = self.mocap_data[ix]
@@ -225,7 +230,7 @@ def handle_args():
     parser.add_argument('--image-topic', required=True, help='topic to extract images from.')
     parser.add_argument('--imu-topic', required=True, help='topic to extract inertial data from.')
     parser.add_argument('--mocap-topic', required=True, help='topic to extract motion capture data from.')
-    parser.add_argument('-o', '--output_root', default='/home', help='Path to the output directory.')
+    parser.add_argument('-o', '--output_root', help='Path to the output directory.')
     parser.add_argument('-s', '--start', default='13')
     parser.add_argument('-e', '--end', default='0')
     

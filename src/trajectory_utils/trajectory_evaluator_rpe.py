@@ -75,10 +75,10 @@ from trajectory_evaluator_base import TrajectoryEvaluatorBase
 
 class TrajectoryEvaluatorRPE(TrajectoryEvaluatorBase):
 
-    def __init__(self):
+    def __init__(self, gt_file=None, est_file=None, plot=False, plot_dir=None, do_scale=True, do_align=True):
 
         # Instantiate super class.
-        super().__init__()
+        super().__init__(gt_file, est_file, plot, plot_dir, do_scale, do_align)
 
     def compute_rpe(self, gt_traj = None, est_traj = None, delta = 1, do_scale = False, do_align = False):
         # Use the member variables if an input is not provided.
@@ -140,5 +140,16 @@ class TrajectoryEvaluatorRPE(TrajectoryEvaluatorBase):
 
 
 if __name__ == "__main__":
-    rpe_evaluator = TrajectoryEvaluatorRPE()
+
+    # Parse the command line arguments.
+    parser = argparse.ArgumentParser(description='Compute the relative pose error (RPE) for a monocular VO/SLAM system.')
+    parser.add_argument('--gt-file', type=str, required=True, help='Path to the ground truth trajectory file.')
+    parser.add_argument('--est-file', type=str, required=True, help='Path to the estimated trajectory file.')
+    parser.add_argument('--do-scale', action='store_true', help='Whether to scale the estimated trajectory to the ground truth trajectory.')
+    parser.add_argument('--do-align', action='store_true', help='Whether to align the estimated trajectory to the ground truth trajectory.')
+    parser.add_argument('--plot', action='store_true', help='Whether to plot the 2D projections of the trajectories.')
+    parser.add_argument('--plot-dir', default='', help='Path to the directory where the plot will be saved.')
+    args = parser.parse_args()
+
+    rpe_evaluator = TrajectoryEvaluatorRPE(**vars(args))
     rpe, gt_traj, est_traj_aligned = rpe_evaluator.compute_rpe()
