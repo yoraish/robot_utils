@@ -14,7 +14,7 @@ from scipy.spatial.transform import Rotation
 
 class TrajectoryEvaluatorBase(): 
     """Base class for trajectory evaluators."""
-    def __init__(self, gt_file=None, est_file=None, plot=False, plot_dir=None, do_scale=True, do_align=True):
+    def __init__(self, gt_file=None, est_file=None, plot=False, plot_gfp =None, do_scale=True, do_align=True):
         #####################
         # Parse the command line arguments
         # and set parameters. If args were not passed, the values here may be None and False.
@@ -28,10 +28,10 @@ class TrajectoryEvaluatorBase():
         self.plot = plot
 
         # Set up the plot directory.
-        if not plot_dir:
-            self.plot_dir = os.path.dirname(est_file)
+        if not plot_gfp :
+            self.plot_gfp  = os.path.dirname(est_file)
         else:
-            self.plot_dir = plot_dir
+            self.plot_gfp  = plot_gfp 
 
         # Set up the scale flag.
         self.do_scale = do_scale
@@ -114,7 +114,7 @@ class TrajectoryEvaluatorBase():
     ##########################
     # Visualization functions.
     ##########################
-    def visualize(self, gt_traj, est_traj, title_text = '', arrow_length = 0.1):
+    def visualize(self, gt_traj, est_traj, title_text = '', plot_gfp  = None, arrow_length = 0.1):
         """Visualize the ground truth trajectory and the estimated trajectory.
         """
         # Visualize the trajectory.
@@ -138,9 +138,13 @@ class TrajectoryEvaluatorBase():
             
         ax.legend()
         ax.set_title(title_text)
-        plt.show()
+        if plot_gfp:
+            # Add the score to the plot name and save.
+            plt.savefig(plot_gfp.split('.')[0] + '_' + title_text + '.png')
+        else:
+            plt.show()
 
-    def visualize_2d_projection(self, gt_traj, est_traj, title_text = '', plot_dir = None):
+    def visualize_2d_projection(self, gt_traj, est_traj, title_text = '', plot_gfp  = None):
         """Visualize the ground truth trajectory and the estimated trajectory.
         """
         # Visualize the trajectory.
@@ -165,10 +169,11 @@ class TrajectoryEvaluatorBase():
         ax.set_title(title_text)
         ax.legend()
 
-        if plot_dir is not None:
-            plt.savefig(os.path.join(plot_dir, title_text + '.png'))
-
-        plt.show()
+        if plot_gfp:
+            # Add the score to the plot name and save.
+            plt.savefig(plot_gfp.split('.')[0] + '_' + title_text + '.png')
+        else:
+            plt.show()
 
 
     def align_and_scale_traj_to_gt(self, gt_traj, est_traj, calc_scale=False):

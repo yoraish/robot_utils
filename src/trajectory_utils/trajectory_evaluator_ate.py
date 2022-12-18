@@ -80,15 +80,15 @@ from trajectory_evaluator_base import TrajectoryEvaluatorBase
 
 class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):        
 
-    def __init__(self, gt_file=None, est_file=None, plot=False, plot_dir=None, do_scale=True, do_align=True):
+    def __init__(self, gt_file=None, est_file=None, plot=False, plot_gfp=None, do_scale=True, do_align=True):
         """Initialize the trajectory evaluator."""
-        super().__init__(gt_file, est_file, plot, plot_dir, do_scale, do_align)
+        super().__init__(gt_file, est_file, plot, plot_gfp, do_scale, do_align)
 
         # Placeholder for estimated trajectory aligned to the ground truth and scaled.
         self.est_traj_aligned = None
 
 
-    def compute_ate(self, gt_traj = None, est_traj = None, do_scale=None, do_align=False):
+    def compute_ate(self, gt_traj = None, est_traj = None, do_scale=False, do_align=False):
         """Compute the absolute trajectory error (ATE).
             self.gt_traj (np.ndarray , (N,8): stamp, xyz xyzw): Ground truth trajectory.
             self.est_traj (np.ndarray, (N,8): stamp, xyz xyzw): Estimated trajectory.
@@ -109,19 +109,18 @@ class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):
         # Align the estimated trajectory to the ground truth trajectory, get the alignment transformation, and the scale if requested.
         if do_align:
             est_traj_aligned, s = self.align_and_scale_traj_to_gt(gt_traj, est_traj, do_scale)
-            print(Fore.GREEN + "Scale factor: " + str(s) + Style.RESET_ALL)
+            print(Fore.GREEN + "ATE Scale factor: " + str(s) + Style.RESET_ALL)
         else:
             est_traj_aligned = est_traj
-            s = 1.0
         
         self.est_traj_aligned = est_traj_aligned
         ate = np.sqrt( (np.sum( np.linalg.norm(self.est_traj_aligned[:, 1:4] - gt_traj[:, 1:4], axis = 1)**2 ) / len(est_traj_aligned)  ) )
         self.ate = ate
 
         if self.plot:
-            title_text = "ATE: {:.3f} m".format(ate)
-            self.visualize(gt_traj, est_traj_aligned, title_text)
-            self.visualize_2d_projection(gt_traj, est_traj_aligned, title_text, self.plot_dir)
+            title_text = "ATE_{:.3f} m".format(ate)
+            self.visualize(gt_traj, est_traj_aligned, title_text, self.plot_gfp)
+            self.visualize_2d_projection(gt_traj, est_traj_aligned, title_text, self.plot_gfp)
 
         # Return the ATE, the ground truth trajectory with its timestamps, and the aligned estimated trajectory.
         return ate, gt_traj, est_traj_aligned

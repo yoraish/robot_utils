@@ -75,10 +75,10 @@ from trajectory_evaluator_base import TrajectoryEvaluatorBase
 
 class TrajectoryEvaluatorRPE(TrajectoryEvaluatorBase):
 
-    def __init__(self, gt_file=None, est_file=None, plot=False, plot_dir=None, do_scale=True, do_align=True):
+    def __init__(self, gt_file=None, est_file=None, plot=False, plot_gfp=None, do_scale=True, do_align=True):
 
         # Instantiate super class.
-        super().__init__(gt_file, est_file, plot, plot_dir, do_scale, do_align)
+        super().__init__(gt_file, est_file, plot, plot_gfp, do_scale, do_align)
 
     def compute_rpe(self, gt_traj = None, est_traj = None, delta = 1, do_scale = False, do_align = False):
         # Use the member variables if an input is not provided.
@@ -92,6 +92,8 @@ class TrajectoryEvaluatorRPE(TrajectoryEvaluatorBase):
         # Align the estimated trajectory to the ground truth trajectory, get the alignment transformation, and the scale if requested.
         if do_align:
             est_traj_aligned, s = self.align_and_scale_traj_to_gt(gt_traj, est_traj, do_scale)
+            print(Fore.GREEN + "RPE Scale: " + str(s) + Style.RESET_ALL)
+
         else:
             est_traj_aligned = est_traj
             s = 1.0
@@ -133,8 +135,8 @@ class TrajectoryEvaluatorRPE(TrajectoryEvaluatorBase):
         rot_error_mean = np.mean(rot_error)
 
         if self.plot:
-            title_text = "RPE " + "{:.5f}".format(trans_error_mean) + " m, " + "{:.5f}".format(rot_error_mean) + " radians(?)"
-            self.visualize_2d_projection(gt_traj, est_traj_aligned, title_text)
+            title_text = "RPE_" + "{:.5f}".format(trans_error_mean) + "_t_" + "{:.5f}".format(rot_error_mean) + "_R"
+            self.visualize_2d_projection(gt_traj, est_traj_aligned, title_text, self.plot_gfp)
         return (trans_error_mean, rot_error_mean), gt_traj, est_traj_aligned
 
 
