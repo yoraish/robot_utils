@@ -8,23 +8,23 @@ The dataset is saved in the following format:
     /output_root_directory
         /MocapEnv
             /Data_hard
-                /image_ros
+                /image_<new_cam_name>
                     /000000.png
                     /000001.png
                     ...
-                pose_cam_ros.txt
+                pose_<new_cam_name>.txt
 
                 
 
 Run with a command like:
-
-python3 bag_to_traj_dataset.py  -b /home/user/data/2022-11-29_project/2022-11-28-21-24-16.bag \
-                                --image-topic /turtlebot3/camera1/image_raw \
-                                --mocap-topic /turtlebot3/motion \
-                                -o /home/user/tartanair_root/ \
-                                -n my_mocap_env \
-                                -e 13.5 \
-                                -s 12
+python3  bag_to_tartanair.py \
+     -b /media/yoraish/overflow/data/fish_mocap/2023-05-09-11-42-44.bag \
+     -o /media/yoraish/overflow/data/fish_mocap/tartanair_converted \
+     --image-topic /camera_image1 \
+     --mocap-topic /mocap_node/fish/pose \
+     --hz 10 \
+     -s 10 \
+     --e 1200
 '''
 
 # General imports.
@@ -43,7 +43,7 @@ from pytransform3d.rotations import *
 import rosbag
 
 class BagToTartanAir(object):
-    def __init__(self, bagfile, image_topic, mocap_topic, tartanair_data_root, new_env_name, hz, start = 0, end = np.inf):
+    def __init__(self, bagfile, image_topic, mocap_topic, tartanair_data_root, new_env_name, new_cam_name, hz, start = 0, end = np.inf):
         # Parse arguments.
 
         self.bagfile_gp = bagfile
@@ -51,19 +51,37 @@ class BagToTartanAir(object):
         self.mocap_topic = mocap_topic
         self.hz = hz
 
+        # Check which trajectories exist, and create a new one if needed.
+        existing_traj_dirs = os.listdir(os.path.join(tartanair_data_root, new_env_name, "Data_hard"))
+        existing_traj_dirs = sorted([d for d in existing_traj_dirs if d.startswith("P")])
+
+        if len(existing_traj_dirs) == 0:
+            traj_name = "P000"
+        else:
+            traj_name = existing_traj_dirs[-1]
+
         # If no output directory specified, save as a subdirectory of the bagfile directory.
-        self.out_dir_gp = os.path.join(tartanair_data_root, new_env_name, "Data_hard", "P000")
+        self.out_dir_gp = os.path.join(tartanair_data_root, new_env_name, "Data_hard", traj_name)
 
         # Create if the output directory does not exist.
         if not os.path.exists(self.out_dir_gp):
             os.makedirs(self.out_dir_gp)
         else:
-            overwrite = input(Fore.RED + f"Warning: Output directory [{self.out_dir_gp}] already exists. Would you like to overwrite? [Y/n]: " + Style.RESET_ALL)
+            # overwrite = input(Fore.RED + f"Warning: Output directory [{self.out_dir_gp}] already exists. Would you like to overwrite? [Y/n]: " + Style.RESET_ALL)
+            overwrite = 'N'
             if overwrite == "Y" or overwrite == "":
                 print("Overwriting.")
             else:
-                print("Exiting.")
-                exit()
+                traj_name = int(traj_name[1:]) + 1
+                traj_name = "P" + str(traj_name).zfill(3)
+                # new_traj = input(Fore.RED + f"Would you like to create a new trajectory named [{traj_name}]? [Y/n]: " + Style.RESET_ALL)
+                new_traj = 'Y'
+                if new_traj == "Y" or new_traj == "":
+                    self.out_dir_gp = os.path.join(tartanair_data_root, new_env_name, "Data_hard", traj_name)
+                    os.makedirs(self.out_dir_gp)
+                else:
+                    print("Exiting.")
+                    exit()
 
 
         self.bagstart = float(start)
@@ -82,12 +100,13 @@ class BagToTartanAir(object):
 
 
         # Create output subdirectories.
-        self.out_dir_images = os.path.join(self.out_dir_gp, "image_ros")
+        self.out_dir_images = os.path.join(self.out_dir_gp, "image_" + new_cam_name)
         if not os.path.exists(self.out_dir_images):
             os.makedirs(self.out_dir_images)
 
         # Create output files.
-        self.out_file_pose = os.path.join(self.out_dir_gp, "pose_cam_ros.txt")
+        self.out_file_pose = os.path.join(self.out_dir_gp, f"pose_{new_cam_name}.txt")
+        self.out_file_pose_lcam_front = os.path.join(self.out_dir_gp, "pose_lcam_front.txt") # This is a hack to get TVOFE to be happy.
         self.out_file_image_stamps = os.path.join(self.out_dir_gp, "image_stamps.txt")
 
         # Storage objects for collected information.
@@ -111,32 +130,34 @@ class BagToTartanAir(object):
             if startt is None:
                 startt = t.to_sec()
 
-            # Check if registering an image is allowed.
-            if not self.allow_register_image:
-                if t.to_nsec() - self.last_image_stamp > 1e9 / float(self. hz):
-                    self.allow_register_image = True
 
             if t.to_sec() - startt > self.bagstart:
+                # Check if registering an image is allowed.
+                if not self.allow_register_image:
+                    if t.to_nsec() - self.last_image_stamp > 1e9 / float(self. hz):
+                        self.allow_register_image = True
+
                 ##################
                 # Process images #
                 ##################
                 if topic == self.image_topic and self.allow_register_image:
-                    # Process image message.
-                    img = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)[:,:,:3] 
-                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                    # Only process if we have pose data. Otherwise, skip this image.
+                    if self.last_gt_pose:
+                        # Process image message.
+                        img = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)[:,:,:3] 
+                        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-                    # Create a filename for the image.
-                    image_outpath = os.path.join(self.out_dir_images, str(self.image_counter).zfill(6) + ".png")
-                    self.image_counter += 1
-                    image_outpath_relative = "/".join(image_outpath.split("/")[-2:])
-                    self.image_stamps.append(str(t.to_nsec()) +  " " + image_outpath_relative)
-                    print(image_outpath_relative)
-                    
-                    # Save the image.
-                    cv2.imwrite(image_outpath, img)
+                        # Create a filename for the image.
+                        image_outpath = os.path.join(self.out_dir_images, str(self.image_counter).zfill(6) + ".png")
+                        self.image_counter += 1
+                        image_outpath_relative = "/".join(image_outpath.split("/")[-2:])
+                        self.image_stamps.append(str(t.to_nsec()) +  " " + image_outpath_relative)
+                        
+                        # Save the image.
+                        cv2.imwrite(image_outpath, img)
 
-                    # Register the pose.
-                    self.gt_pose_data.append(self.last_gt_pose)
+                        # Register the pose.
+                        self.gt_pose_data.append(self.last_gt_pose)
 
                     # Set the flag to allow registering the next image.
                     self.allow_register_image = False
@@ -177,7 +198,12 @@ class BagToTartanAir(object):
         
         # Save the pose data.
         self.gt_pose_data = np.vstack(self.gt_pose_data)
-        np.savetxt(self.out_file_pose, self.gt_pose_data, fmt="%d %f %f %f %f %f %f %f", header="nsecs x y z qx qy qz qw")
+        np.savetxt(self.out_file_pose, self.gt_pose_data[:, 1:], fmt="%f %f %f %f %f %f %f")
+        np.savetxt(self.out_file_pose_lcam_front, self.gt_pose_data[:, 1:], fmt="%f %f %f %f %f %f %f")
+
+        # Save the original bagfile name.
+        with open(os.path.join(self.out_dir_gp, "bagfile.txt"), "w") as f:
+            f.write(self.bagfile_gp)
 
     def visualize_traj(self):
         # Visualize the trajectory.
@@ -207,9 +233,6 @@ class BagToTartanAir(object):
         plt.savefig(os.path.join(self.out_dir_gp, "traj.png"))
 
 
-        plt.show()
-
-
     
 def handle_args():
     # Set up command line arguments.
@@ -222,14 +245,33 @@ def handle_args():
     parser.add_argument('-s', '--start', default='0')
     parser.add_argument('-e', '--end', default='2500')
     parser.add_argument('--hz', default='100', help='Frequency of the data in Hz.')
+    parser.add_argument('--new-cam-name', default='lcam_fish', help='Name of the new camera.')
     
     return parser.parse_args()
 
-if __name__ == "__main__":
+def main():
     args = handle_args()
-    b2f = BagToTartanAir(**vars(args))
-    b2f.process_bag()
-    b2f.visualize_traj()
+    bagfile_gp = args.bagfile
+
+    # Check if the bagfile is a valid file or a directory.
+    if os.path.isdir(bagfile_gp):
+        bagfile_gp = [os.path.join(bagfile_gp, f) for f in os.listdir(bagfile_gp) if f.endswith(".bag")]
+    elif os.path.isfile(bagfile_gp):
+        bagfile_gp = [bagfile_gp]
+    else:
+        raise ValueError("Bagfile path is not a valid file or directory.")
+    
+    for bagfile in bagfile_gp:
+        print(Fore.GREEN + f"Processing bagfile: {bagfile}" + Style.RESET_ALL)
+        args.bagfile = bagfile
+
+        b2f = BagToTartanAir(**vars(args))
+        b2f.process_bag()
+        b2f.visualize_traj()
+
+
+if __name__ == "__main__":
+    main()
 
 '''
 Example:
