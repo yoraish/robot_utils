@@ -140,7 +140,8 @@ class TrajectoryEvaluatorBase():
         ax.set_title(title_text)
         if plot_gfp:
             # Add the score to the plot name and save.
-            plt.savefig(plot_gfp.split('.')[0] + '_' + title_text + '.png')
+            # plt.savefig(plot_gfp.split('.')[0] + '_' + title_text + '.png')
+            plt.savefig(plot_gfp.split('.')[0] + '_3d.png')
         else:
             plt.show()
 
@@ -171,7 +172,7 @@ class TrajectoryEvaluatorBase():
 
         if plot_gfp:
             # Add the score to the plot name and save.
-            plt.savefig(plot_gfp.split('.')[0] + '_' + title_text + '.png')
+            plt.savefig(plot_gfp)
         else:
             plt.show()
 

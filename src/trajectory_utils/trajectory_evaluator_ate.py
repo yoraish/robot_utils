@@ -76,7 +76,7 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 
 # Local imports.
-from trajectory_evaluator_base import TrajectoryEvaluatorBase
+from .trajectory_evaluator_base import TrajectoryEvaluatorBase
 
 class TrajectoryEvaluatorATE(TrajectoryEvaluatorBase):        
 
